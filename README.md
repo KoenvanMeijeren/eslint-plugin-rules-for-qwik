@@ -11,7 +11,7 @@ npm install koenvanmeijeren-eslint-plugin-rules-for-qwik
 ```
 
 ## Usage
-In your .eslintrc file, add the rules to your plugins:
+In your `.eslintrc` file, add the rules to your plugins:
 
 ```json
 {
@@ -37,7 +37,7 @@ npm run release
 
 ### no-direct-scss-imports
 
-This rule checks for direct imports of SCSS files and suggests using the `styles` object instead.
+This rule checks for direct imports of SCSS files and suggests using importing the SCSS in global files instead.
 
 ## License
 
