@@ -105,12 +105,16 @@ module.exports = {
                             node.callee.type === 'Identifier' &&
                             node.callee.name === 'component$'
                         ) {
-                            // Check if the call has type parameters
-                            if (!node.typeParameters) {
-                                context.report({
-                                    node,
-                                    message: 'The component$ call must have generic type parameters defining the props.',
-                                });
+                            // Check if the function parameter list is not empty
+                            const arrowFunction = node.arguments[0];
+                            if (arrowFunction && arrowFunction.type === 'ArrowFunctionExpression' && arrowFunction.params.length > 0) {
+                                // Check if the call has type parameters
+                                if (!node.typeParameters) {
+                                    context.report({
+                                        node,
+                                        message: 'The component$ call must have generic type parameters defining the props.',
+                                    });
+                                }
                             }
                         }
                     },
