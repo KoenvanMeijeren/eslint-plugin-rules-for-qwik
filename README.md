@@ -42,6 +42,10 @@ npm run release
 
 This rule checks for direct imports of SCSS files and suggests using importing the SCSS in global files instead.
 
+### require-document-head
+
+This rule requires the document head for all routes.
+
 ## License
 
 This project is licensed under the MIT License.
