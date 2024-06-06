@@ -1,6 +1,6 @@
 /**
  * This module exports a set of ESLint rules.
- * @module eslint-plugin-no-direct-scss-imports
+ * @module koenvanmeijeren-rules-for-qwik
  */
 module.exports = {
     /**
@@ -31,6 +31,60 @@ module.exports = {
                             context.report({
                                 node,
                                 message: 'Avoid direct imports of SCSS files in component libraries in Qwik. Use classes instead and import the SCSS file in the global SCSS file.',
+                            });
+                        }
+                    },
+                };
+            },
+        },
+        /**
+         * The 'require-document-head' rule checks for the presence of a DocumentHead export in route files.
+         * @property {Object} 'require-document-head' - The rule object for 'require-document-head'.
+         * @property {Function} 'require-document-head'.create - The function to create the rule.
+         * @param {Object} context - The context object provided by ESLint.
+         * @returns {Object} An object containing the AST node types to listen for and the functions to run on those nodes.
+         */
+        'require-document-head': {
+            create(context) {
+                const filePath = context.getFilename();
+                const relativePath = path.relative(context.getCwd(), filePath);
+
+                // Check if the file is within the routes directory
+                if (!relativePath.startsWith('routes/')) {
+                    return {};
+                }
+
+                // Get excluded files from the rule options
+                const options = context.options[0] || {};
+                const excludedFiles = options.excludedFiles || [];
+
+                // Check if the file is in the excluded files list
+                if (excludedFiles.some((pattern) => new RegExp(pattern).test(filePath))) {
+                    return {};
+                }
+
+                return {
+                    /**
+                     * The Program function checks if there is an export named 'DocumentHead'.
+                     * @param {Object} node - The AST node to check.
+                     */
+                    Program(node) {
+                        const sourceCode = context.getSourceCode();
+                        const hasDocumentHeadExport = sourceCode.ast.body.some((node) =>
+                            node.type === 'ExportNamedDeclaration' &&
+                            node.declaration &&
+                            node.declaration.declarations &&
+                            node.declaration.declarations.some((declaration) =>
+                                declaration.id.name === 'head' &&
+                                declaration.init &&
+                                declaration.init.type === 'ArrowFunctionExpression'
+                            )
+                        );
+
+                        if (!hasDocumentHeadExport) {
+                            context.report({
+                                node,
+                                message: 'Every route file must export a DocumentHead constant.',
                             });
                         }
                     },

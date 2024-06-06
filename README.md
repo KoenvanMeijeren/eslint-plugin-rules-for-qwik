@@ -19,7 +19,10 @@ In your `.eslintrc` file, add the rules to your plugins:
     "koenvanmeijeren-rules-for-qwik"
   ],
   "rules": {
-    "koenvanmeijeren-rules-for-qwik/no-direct-scss-imports": "error"
+    "koenvanmeijeren-rules-for-qwik/no-direct-scss-imports": "error",
+    "check-document-head/require-document-head": ["error", {
+      "excludedFiles": ["**/exclude-this-file.ts", "**/exclude-this-directory/**"]
+    }]
   }
 }
 ```
