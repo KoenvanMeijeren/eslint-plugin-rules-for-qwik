@@ -1,5 +1,3 @@
-const path = require('path');
-
 /**
  * This module exports a set of ESLint rules.
  * @module koenvanmeijeren-rules-for-qwik
@@ -49,12 +47,6 @@ module.exports = {
         'require-document-head': {
             create(context) {
                 const filePath = context.getFilename();
-                const relativePath = path.relative(context.getCwd(), filePath);
-
-                // Check if the file is within the routes directory
-                if (!relativePath.startsWith('routes/')) {
-                    return {};
-                }
 
                 // Get excluded files from the rule options
                 const options = context.options[0] || {};
