@@ -1,3 +1,5 @@
+const path = require('path');
+
 /**
  * This module exports a set of ESLint rules.
  * @module koenvanmeijeren-rules-for-qwik
