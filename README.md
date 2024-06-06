@@ -7,7 +7,7 @@ ESLint plugin with rules for programming in Qwik.
 Install the plugin with npm:
 
 ```bash
-npm install koenvanmeijeren-eslint-plugin-rules-for-qwik
+npm install --save-dev koenvanmeijeren-eslint-plugin-rules-for-qwik
 ```
 
 ## Usage
