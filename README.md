@@ -20,6 +20,7 @@ In your `.eslintrc` file, add the rules to your plugins:
   ],
   "rules": {
     "koenvanmeijeren-rules-for-qwik/no-direct-scss-imports": "error",
+    "koenvanmeijeren-rules-for-qwik/require-generic-props": "error"
     "koenvanmeijeren-rules-for-qwik/require-document-head": ["error", {
       "excludedFiles": ["**/exclude-this-file.ts", "**/exclude-this-directory/**"]
     }]
@@ -45,6 +46,14 @@ This rule checks for direct imports of SCSS files and suggests using importing t
 ### require-document-head
 
 This rule requires the document head for all routes.
+
+> Added to comply with WCAG standards.
+
+### require-generic-props
+
+This rule requires generic props for all components.
+
+> Added to fix a weird error in Qwik component library.
 
 ## License
 

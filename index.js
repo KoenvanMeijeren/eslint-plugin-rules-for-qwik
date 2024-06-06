@@ -85,5 +85,37 @@ module.exports = {
                 };
             },
         },
+        /**
+         * The 'require-generic-props' rule checks for the presence of generic type parameters in component$ calls.
+         * @property {Object} 'require-generic-props' - The rule object for 'require-generic-props'.
+         * @property {Function} 'require-generic-props'.create - The function to create the rule.
+         * @param {Object} context - The context object provided by ESLint.
+         * @returns {Object} An object containing the AST node types to listen for and the functions to run on those nodes.
+         */
+        'require-generic-props': {
+            create(context) {
+                return {
+                    /**
+                     * The CallExpression function checks if the call is to component$ and if it has the generic type parameter defined.
+                     * @param {Object} node - The AST node to check.
+                     */
+                    CallExpression(node) {
+                        // Check if the callee is component$
+                        if (
+                            node.callee.type === 'Identifier' &&
+                            node.callee.name === 'component$'
+                        ) {
+                            // Check if the call has type parameters
+                            if (!node.typeParameters) {
+                                context.report({
+                                    node,
+                                    message: 'The component$ call must have generic type parameters defining the props.',
+                                });
+                            }
+                        }
+                    },
+                };
+            },
+        },
     },
 };
