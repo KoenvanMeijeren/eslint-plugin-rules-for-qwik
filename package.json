@@ -13,7 +13,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/KoenvanMeijeren/eslint-plugin-koenvanmeijeren-rules-for-qwik.git"
+    "url": "git+https://github.com/KoenvanMeijeren/eslint-plugin-rules-for-qwik.git"
   },
   "main": "index.js",
   "scripts": {
@@ -24,7 +24,7 @@
     "eslint": "^8.52.0"
   },
   "devDependencies": {
-    "@typescript-eslint/parser": "^6.15.0",
+    "@typescript-eslint/parser": "^8.6.0",
     "eslint": "^8.56.0",
     "jest": "^29.7.0"
   }
