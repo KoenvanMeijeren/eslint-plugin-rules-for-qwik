@@ -87,7 +87,8 @@ module.exports = {
         },
         /**
          * The 'require-entity-query-conditions' rule checks that entityQuery objects always have
-         * a group with AND conjunction containing both status and dental_laboratory conditions.
+         * a group with AND conjunction containing both status and dental_laboratory conditions,
+         * or these conditions are directly in the filter's conditions array.
          * @property {Object} 'require-entity-query-conditions' - The rule object.
          * @property {Function} 'require-entity-query-conditions'.create - The function to create the rule.
          * @param {Object} context - The context object provided by ESLint.
@@ -109,7 +110,43 @@ module.exports = {
                 }
 
                 /**
-                 * Checks if a node has the required AND conjunction with status and dental_laboratory conditions
+                 * Checks if the given conditions array contains both status and dental_laboratory conditions
+                 * @param {Array} conditions - The array of condition objects to check
+                 * @returns {boolean} - Whether the required conditions are present
+                 */
+                function conditionsArrayHasRequired(conditions) {
+                    if (!conditions || !Array.isArray(conditions)) return false;
+
+                    // Check if there are conditions for both status and dental_laboratory
+                    const hasStatusCondition = conditions.some(condition => {
+                        if (!condition || condition.type !== 'ObjectExpression') return false;
+                        const fieldProperty = condition.properties.find(
+                            prop => prop.key.type === 'Identifier' && prop.key.name === 'field'
+                        );
+                        return fieldProperty &&
+                               fieldProperty.value &&
+                               fieldProperty.value.type === 'Literal' &&
+                               fieldProperty.value.value === 'status';
+                    });
+
+                    const hasDentalLabCondition = conditions.some(condition => {
+                        if (!condition || condition.type !== 'ObjectExpression') return false;
+                        const fieldProperty = condition.properties.find(
+                            prop => prop.key.type === 'Identifier' && prop.key.name === 'field'
+                        );
+                        return fieldProperty &&
+                               fieldProperty.value &&
+                               fieldProperty.value.type === 'Literal' &&
+                               fieldProperty.value.value === 'dental_laboratory';
+                    });
+
+                    return hasStatusCondition && hasDentalLabCondition;
+                }
+
+                /**
+                 * Checks if a node has the required conditions either:
+                 * 1. In a group with AND conjunction, or
+                 * 2. Directly in the filter's conditions array
                  * @param {Object} node - The node to check
                  * @returns {boolean} - Whether the required conditions are present
                  */
@@ -131,7 +168,19 @@ module.exports = {
 
                     if (!filterProperty || !filterProperty.value || filterProperty.value.type !== 'ObjectExpression') return false;
 
-                    // Find the groups array inside filter
+                    // Check for direct conditions at the top level of the filter
+                    const conditionsProperty = filterProperty.value.properties.find(
+                        prop => prop.key.type === 'Identifier' && prop.key.name === 'conditions'
+                    );
+
+                    if (conditionsProperty &&
+                        conditionsProperty.value &&
+                        conditionsProperty.value.type === 'ArrayExpression' &&
+                        conditionsArrayHasRequired(conditionsProperty.value.elements)) {
+                        return true;
+                    }
+
+                    // If not found in top-level conditions, check for them in groups
                     const groupsProperty = filterProperty.value.properties.find(
                         prop => prop.key.type === 'Identifier' && prop.key.name === 'groups'
                     );
@@ -147,46 +196,25 @@ module.exports = {
                             prop => prop.key.type === 'Identifier' && prop.key.name === 'conjunction'
                         );
 
-                        if (!conjunctionProperty ||
-                            !conjunctionProperty.value ||
-                            conjunctionProperty.value.type !== 'Literal' ||
-                            conjunctionProperty.value.value !== 'AND') return false;
+                        if (conjunctionProperty &&
+                            conjunctionProperty.value &&
+                            conjunctionProperty.value.type === 'Literal' &&
+                            conjunctionProperty.value.value === 'AND') {
 
-                        // Find the conditions array
-                        const conditionsProperty = group.properties.find(
-                            prop => prop.key.type === 'Identifier' && prop.key.name === 'conditions'
-                        );
-
-                        if (!conditionsProperty ||
-                            !conditionsProperty.value ||
-                            conditionsProperty.value.type !== 'ArrayExpression') return false;
-
-                        const conditions = conditionsProperty.value.elements;
-
-                        // Check if there are conditions for both status and dental_laboratory
-                        const hasStatusCondition = conditions.some(condition => {
-                            if (!condition || condition.type !== 'ObjectExpression') return false;
-                            const fieldProperty = condition.properties.find(
-                                prop => prop.key.type === 'Identifier' && prop.key.name === 'field'
+                            // Find the conditions array in this AND group
+                            const groupConditionsProperty = group.properties.find(
+                                prop => prop.key.type === 'Identifier' && prop.key.name === 'conditions'
                             );
-                            return fieldProperty &&
-                                   fieldProperty.value &&
-                                   fieldProperty.value.type === 'Literal' &&
-                                   fieldProperty.value.value === 'status';
-                        });
 
-                        const hasDentalLabCondition = conditions.some(condition => {
-                            if (!condition || condition.type !== 'ObjectExpression') return false;
-                            const fieldProperty = condition.properties.find(
-                                prop => prop.key.type === 'Identifier' && prop.key.name === 'field'
-                            );
-                            return fieldProperty &&
-                                   fieldProperty.value &&
-                                   fieldProperty.value.type === 'Literal' &&
-                                   fieldProperty.value.value === 'dental_laboratory';
-                        });
+                            if (groupConditionsProperty &&
+                                groupConditionsProperty.value &&
+                                groupConditionsProperty.value.type === 'ArrayExpression') {
 
-                        return hasStatusCondition && hasDentalLabCondition;
+                                return conditionsArrayHasRequired(groupConditionsProperty.value.elements);
+                            }
+                        }
+
+                        return false;
                     });
                 }
 
@@ -200,7 +228,7 @@ module.exports = {
                             if (!hasRequiredConditions(node.value)) {
                                 context.report({
                                     node,
-                                    message: 'Entity queries must have a group with AND conjunction containing both "status" and "dental_laboratory" conditions.'
+                                    message: 'Entity queries must have the required "status" and "dental_laboratory" conditions either at the top level or in a group with AND conjunction.'
                                 });
                             }
                         }
@@ -233,7 +261,7 @@ module.exports = {
                                     if (entityQueryProp && !hasRequiredConditions(entityQueryProp.value)) {
                                         context.report({
                                             node,
-                                            message: 'Entity queries must have a group with AND conjunction containing both "status" and "dental_laboratory" conditions.'
+                                            message: 'Entity queries must have the required "status" and "dental_laboratory" conditions either at the top level or in a group with AND conjunction.'
                                         });
                                     }
                                 }
