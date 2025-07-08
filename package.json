@@ -1,7 +1,7 @@
 {
   "name": "eslint-plugin-koenvanmeijeren-rules-for-qwik",
   "description": "ESLint plugin with rules from Koen van Meijeren for programming in Qwik",
-  "version": "1.3.3",
+  "version": "1.3.4",
   "keywords": [
     "eslint",
     "eslintplugin",

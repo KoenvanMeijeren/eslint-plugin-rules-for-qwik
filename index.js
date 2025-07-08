@@ -96,6 +96,11 @@ module.exports = {
          */
         'require-entity-query-conditions': {
             create(context) {
+                // Keep track of reported query objects to prevent duplicate reports
+                const reportedQueries = new WeakSet();
+                // Store locations of reported errors to prevent multiple errors in the same location
+                const reportedLocations = new Set();
+
                 /**
                  * Checks if a node is an entityQuery object
                  * @param {Object} node - The node to check
@@ -218,6 +223,29 @@ module.exports = {
                     });
                 }
 
+                /**
+                 * Report an error for a query if it hasn't been reported already
+                 * @param {Object} node - The node to report the error on
+                 * @param {Object} queryObject - The query object being validated
+                 */
+                function reportError(node, queryObject) {
+                    // Skip if this exact query object has been reported
+                    if (queryObject && reportedQueries.has(queryObject)) return;
+
+                    // Skip if we've already reported an error at this location
+                    const locationKey = `${node.loc.start.line}:${node.loc.start.column}`;
+                    if (reportedLocations.has(locationKey)) return;
+
+                    // Mark this query and location as reported
+                    if (queryObject) reportedQueries.add(queryObject);
+                    reportedLocations.add(locationKey);
+
+                    context.report({
+                        node,
+                        message: 'Entity queries must have the required "status" and "dental_laboratory" conditions either at the top level or in a group with AND conjunction.'
+                    });
+                }
+
                 return {
                     /**
                      * Check object expressions that might be entity queries
@@ -226,10 +254,7 @@ module.exports = {
                     Property(node) {
                         if (isEntityQuery(node) && node.value && node.value.type === 'ObjectExpression') {
                             if (!hasRequiredConditions(node.value)) {
-                                context.report({
-                                    node,
-                                    message: 'Entity queries must have the required "status" and "dental_laboratory" conditions either at the top level or in a group with AND conjunction.'
-                                });
+                                reportError(node, node.value);
                             }
                         }
                     },
@@ -259,10 +284,8 @@ module.exports = {
                                     );
 
                                     if (entityQueryProp && !hasRequiredConditions(entityQueryProp.value)) {
-                                        context.report({
-                                            node,
-                                            message: 'Entity queries must have the required "status" and "dental_laboratory" conditions either at the top level or in a group with AND conjunction.'
-                                        });
+                                        // Pass the entityQuery value as the object to track
+                                        reportError(node, entityQueryProp.value);
                                     }
                                 }
                             }
