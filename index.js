@@ -86,6 +86,164 @@ module.exports = {
             },
         },
         /**
+         * The 'require-entity-query-conditions' rule checks that entityQuery objects always have
+         * a group with AND conjunction containing both status and dental_laboratory conditions.
+         * @property {Object} 'require-entity-query-conditions' - The rule object.
+         * @property {Function} 'require-entity-query-conditions'.create - The function to create the rule.
+         * @param {Object} context - The context object provided by ESLint.
+         * @returns {Object} An object containing the AST node types to listen for and the functions to run on those nodes.
+         */
+        'require-entity-query-conditions': {
+            create(context) {
+                /**
+                 * Checks if a node is an entityQuery object
+                 * @param {Object} node - The node to check
+                 * @returns {boolean} - Whether the node is an entityQuery object
+                 */
+                function isEntityQuery(node) {
+                    return (
+                        node.type === 'Property' &&
+                        node.key.type === 'Identifier' &&
+                        node.key.name === 'entityQuery'
+                    );
+                }
+
+                /**
+                 * Checks if a node has the required AND conjunction with status and dental_laboratory conditions
+                 * @param {Object} node - The node to check
+                 * @returns {boolean} - Whether the required conditions are present
+                 */
+                function hasRequiredConditions(node) {
+                    // If this is not an object expression, we can't check it
+                    if (!node || node.type !== 'ObjectExpression') return false;
+
+                    // Find the __args property which contains the filter
+                    const argsProperty = node.properties.find(
+                        prop => prop.key.type === 'Identifier' && prop.key.name === '__args'
+                    );
+
+                    if (!argsProperty || !argsProperty.value || argsProperty.value.type !== 'ObjectExpression') return false;
+
+                    // Find the filter property inside __args
+                    const filterProperty = argsProperty.value.properties.find(
+                        prop => prop.key.type === 'Identifier' && prop.key.name === 'filter'
+                    );
+
+                    if (!filterProperty || !filterProperty.value || filterProperty.value.type !== 'ObjectExpression') return false;
+
+                    // Find the groups array inside filter
+                    const groupsProperty = filterProperty.value.properties.find(
+                        prop => prop.key.type === 'Identifier' && prop.key.name === 'groups'
+                    );
+
+                    if (!groupsProperty || !groupsProperty.value || groupsProperty.value.type !== 'ArrayExpression') return false;
+
+                    // Check each group to see if one of them matches our requirements
+                    return groupsProperty.value.elements.some(group => {
+                        if (!group || group.type !== 'ObjectExpression') return false;
+
+                        // Check if this group has AND conjunction
+                        const conjunctionProperty = group.properties.find(
+                            prop => prop.key.type === 'Identifier' && prop.key.name === 'conjunction'
+                        );
+
+                        if (!conjunctionProperty ||
+                            !conjunctionProperty.value ||
+                            conjunctionProperty.value.type !== 'Literal' ||
+                            conjunctionProperty.value.value !== 'AND') return false;
+
+                        // Find the conditions array
+                        const conditionsProperty = group.properties.find(
+                            prop => prop.key.type === 'Identifier' && prop.key.name === 'conditions'
+                        );
+
+                        if (!conditionsProperty ||
+                            !conditionsProperty.value ||
+                            conditionsProperty.value.type !== 'ArrayExpression') return false;
+
+                        const conditions = conditionsProperty.value.elements;
+
+                        // Check if there are conditions for both status and dental_laboratory
+                        const hasStatusCondition = conditions.some(condition => {
+                            if (!condition || condition.type !== 'ObjectExpression') return false;
+                            const fieldProperty = condition.properties.find(
+                                prop => prop.key.type === 'Identifier' && prop.key.name === 'field'
+                            );
+                            return fieldProperty &&
+                                   fieldProperty.value &&
+                                   fieldProperty.value.type === 'Literal' &&
+                                   fieldProperty.value.value === 'status';
+                        });
+
+                        const hasDentalLabCondition = conditions.some(condition => {
+                            if (!condition || condition.type !== 'ObjectExpression') return false;
+                            const fieldProperty = condition.properties.find(
+                                prop => prop.key.type === 'Identifier' && prop.key.name === 'field'
+                            );
+                            return fieldProperty &&
+                                   fieldProperty.value &&
+                                   fieldProperty.value.type === 'Literal' &&
+                                   fieldProperty.value.value === 'dental_laboratory';
+                        });
+
+                        return hasStatusCondition && hasDentalLabCondition;
+                    });
+                }
+
+                return {
+                    /**
+                     * Check object expressions that might be entity queries
+                     * @param {Object} node - The AST node to check
+                     */
+                    Property(node) {
+                        if (isEntityQuery(node) && node.value && node.value.type === 'ObjectExpression') {
+                            if (!hasRequiredConditions(node.value)) {
+                                context.report({
+                                    node,
+                                    message: 'Entity queries must have a group with AND conjunction containing both "status" and "dental_laboratory" conditions.'
+                                });
+                            }
+                        }
+                    },
+
+                    /**
+                     * Check direct entityQuery object assignments
+                     * @param {Object} node - The AST node to check
+                     */
+                    VariableDeclarator(node) {
+                        if (node.id &&
+                            node.id.type === 'ObjectPattern' &&
+                            node.id.properties &&
+                            node.id.properties.some(prop => prop.key && prop.key.name === 'entityQuery')) {
+
+                            // This is destructuring an object with entityQuery, check if parent assignment has required conditions
+                            if (node.init &&
+                                node.init.type === 'AwaitExpression' &&
+                                node.init.argument &&
+                                node.init.argument.type === 'CallExpression' &&
+                                node.init.argument.arguments &&
+                                node.init.argument.arguments.length > 0) {
+
+                                const queryArg = node.init.argument.arguments[0];
+                                if (queryArg && queryArg.type === 'ObjectExpression') {
+                                    const entityQueryProp = queryArg.properties.find(prop =>
+                                        prop.key && prop.key.name === 'entityQuery'
+                                    );
+
+                                    if (entityQueryProp && !hasRequiredConditions(entityQueryProp.value)) {
+                                        context.report({
+                                            node,
+                                            message: 'Entity queries must have a group with AND conjunction containing both "status" and "dental_laboratory" conditions.'
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                };
+            },
+        },
+        /**
          * The 'require-generic-props' rule checks for the presence of generic type parameters in component$ calls.
          * @property {Object} 'require-generic-props' - The rule object for 'require-generic-props'.
          * @property {Function} 'require-generic-props'.create - The function to create the rule.
